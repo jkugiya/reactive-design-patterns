@@ -19,6 +19,9 @@ object Worker {
   def props = Props[Worker]
 }
 
+/*
+ * 処理時間が100msなのでProducerの送信能力(/50ms)よりも処理性能が低い。
+ */
 class Worker extends Actor with ActorLogging {
   import scala.concurrent.duration._
 
@@ -26,28 +29,9 @@ class Worker extends Actor with ActorLogging {
     self ! Ping(System.currentTimeMillis())
   }(context.system.dispatchers.lookup("main-scheduler"))
 
-  private[this] val processWork: Actor.Receive = {
+  def receive = {
     case Work(task) =>
       Thread.sleep(100L) // 処理時間は100ms
       sender ! Finished
   }
-
-  private[this] val receivable: Actor.Receive = {
-    case Ping(before) =>
-      val current = System.currentTimeMillis()
-      if (current - before > 150) {
-        context become (unreceivable orElse processWork)
-      }
-  }
-
- private[this] val unreceivable: Actor.Receive = {
-    case Ping(before) =>
-      val current = System.currentTimeMillis()
-      if (current - before <= 150) {
-        context unbecome
-      }
-  }
-
- def receive = receivable orElse processWork
-
 }

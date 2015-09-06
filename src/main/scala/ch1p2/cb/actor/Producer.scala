@@ -1,17 +1,19 @@
 package ch1p2.cb.actor
 
-import scala.concurrent.duration._
-import scala.util.Random
-import akka.actor.Actor
 import scala.collection.mutable.Queue
-import akka.actor.Props
-import akka.actor.ActorLogging
+import scala.concurrent.duration.DurationInt
+import scala.util.Random
+
+import Producer.{ Close, Retry, SendWork }
+import akka.actor.{ Actor, ActorLogging }
+import akka.actor.{ Props, actorRef2Scala }
+import akka.actor.ActorSelection.toScala
 
 object Producer {
   case object SendWork
   case object Close
   case class Retry(work: Worker.Work)
-  
+
   def props = Props(classOf[Producer])
 }
 
@@ -50,8 +52,10 @@ class Producer extends Actor with ActorLogging {
         else buffer.dequeue()
       master ! work
     case Close =>
-      if (buffer.isEmpty) context.system.shutdown()
-      else {
+      if (buffer.isEmpty) {
+        Thread.sleep(2000L)
+        context.system.shutdown()
+      } else {
         val work = buffer.dequeue()
         context.system.scheduler.scheduleOnce(50.millisecond) {
           master ! work
